@@ -13,3 +13,10 @@ dependencies = [
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.basedpyright]
+include = ["src"]
+
+executionEnvironments = [
+  { root = "src" }
+]
