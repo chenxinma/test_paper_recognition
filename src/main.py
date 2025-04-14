@@ -4,6 +4,11 @@ import asyncio
 from dotenv import load_dotenv
 from typing import Any
 
+import cv2
+import filetype # pyright: ignore[reportMissingTypeStubs]
+import pymupdf # pyright: ignore[reportMissingTypeStubs]
+import numpy as np
+
 from rapidocr import RapidOCR # pyright: ignore[reportMissingTypeStubs]
 from tqdm import tqdm
 
@@ -60,23 +65,23 @@ def initialize_ocr_engine():
     """初始化 RapidOCR 引擎"""
     return RapidOCR()
 
-def get_png_files(image_dir:str)-> list[str]:
+def get_files(image_dir:str)-> list[str]:
     """
-    遍历指定目录，获取所有 PNG 文件的路径，若存在同名的 json 文件则跳过该 PNG 文件
+    遍历指定目录，获取所有 文件的路径，若存在同名的 json 文件则跳过该 文件
     :param image_dir: 图片目录路径
-    :return: PNG 文件路径列表
+    :return: 文件路径列表
     """
-    png_files:list[str] = []
+    paper_files:list[str] = []
     for root, _, files in os.walk(image_dir):
         for file in files:
-            if file.lower().endswith('.png'):
+            if file.lower()[-4:] in [".png", ".jpg", ".jpeg", ".pdf"]:
                 file_name = os.path.splitext(file)[0]
                 json_file = file_name + ".json"
                 json_file_path = os.path.join(root, json_file)
                 # 检查同名 json 文件是否存在，若不存在则添加到列表
                 if not os.path.exists(json_file_path):
-                    png_files.append(os.path.join(root, file))
-    return png_files
+                    paper_files.append(os.path.join(root, file))
+    return paper_files
 
 def process_image(engine:RapidOCR, img_url:str):
     """
@@ -86,6 +91,28 @@ def process_image(engine:RapidOCR, img_url:str):
     :return: OCR 识别结果
     """
     return engine(img_url)
+
+def process_pdf(engine:RapidOCR, pdf_url:str):
+    """
+    处理 PDF 文件，进行 OCR 识别并返回结果
+    :param engine: RapidOCR 引擎实例
+    :param pdf_url: PDF 文件路径
+    :return: OCR 识别结果
+    """
+    def convert_img(page: pymupdf.Page):
+        pix: pymupdf.Pixmap = page.get_pixmap(dpi=200) # pyright: ignore[reportAttributeAccessIssue, reportUnknownMemberType, reportUnknownVariableType]
+        img = np.frombuffer(pix.samples, dtype=np.uint8) # pyright: ignore[reportUnknownArgumentType, reportUnknownMemberType]
+        img = img.reshape([pix.h, pix.w, pix.n]) # pyright: ignore[reportUnknownArgumentType, reportUnknownMemberType]
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        return img
+
+    with pymupdf.open(pdf_url) as doc:
+        # 提取第一页并转换为图片
+        first_page = doc[0]
+        img = convert_img(first_page)
+        
+    # 将numpy数组作为输入进行OCR识别
+    return engine(img)
 
 async def save_result_to_json(result, img_url:str, agent:Agent): # pyright: ignore[reportUnknownParameterType,reportMissingParameterType]
     """
@@ -113,13 +140,20 @@ async def main():
     engine = initialize_ocr_engine()
     agent = initialize_agent()
     # 指定图片目录
-    image_dir = "./images"
+    image_dir = "./papers"
     # 获取所有需要处理的 PNG 文件路径
-    png_files = get_png_files(image_dir)
+    paper_files = get_files(image_dir)
     # 遍历处理所有 PNG 文件
-    for img_url in tqdm(png_files):
-        result = process_image(engine, img_url)
-        await save_result_to_json(result, img_url, agent)
+    for file_url in tqdm(paper_files):
+        kind = filetype.guess(file_url) # pyright: ignore[reportUnknownMemberType]
+        if kind is None:
+            print('无法判断文件类型!')
+            continue
+        if kind.extension == 'pdf':
+            result = process_pdf(engine, file_url)
+        else:
+            result = process_image(engine, file_url)
+        await save_result_to_json(result, file_url, agent)
 
 if __name__ == "__main__":
     asyncio.run(main())
