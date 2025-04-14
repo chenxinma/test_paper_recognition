@@ -10,3 +10,6 @@ dependencies = [
     "rapidocr==2.0.5",
     "requests>=2.32.3",
 ]
+
+[tool.setuptools.packages.find]
+where = ["src"]
