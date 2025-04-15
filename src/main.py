@@ -139,10 +139,10 @@ async def main():
     # 初始化 OCR 引擎
     engine = initialize_ocr_engine()
     agent = initialize_agent()
-    # 指定图片目录
-    image_dir = "./papers"
+    # 指定试卷目录
+    paper_directory = os.getenv('PAPER_DIR', './papers')  # 默认值保持向后兼容
     # 获取所有需要处理的 PNG 文件路径
-    paper_files = get_files(image_dir)
+    paper_files = get_files(paper_directory)
     # 遍历处理所有 PNG 文件
     for file_url in tqdm(paper_files):
         kind = filetype.guess(file_url) # pyright: ignore[reportUnknownMemberType]
