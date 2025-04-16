@@ -41,9 +41,12 @@ def process_files(paper_dir: str, target_dir: str):
                 new_json_path = os.path.join(ym_dir, f'{safe_title}.json')  # 新增JSON路径
 
                 # 移动并重命名文件
+                if os.path.exists(new_file_path):
+                    os.remove(new_file_path)
                 shutil.move(os.path.join(root, file), new_file_path)
+                if os.path.exists(new_json_path):
+                    os.remove(new_json_path)
                 shutil.move(json_file_path, new_json_path)  # 新增移动JSON文件
-
 
 
 if __name__ == "__main__":
