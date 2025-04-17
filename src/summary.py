@@ -15,13 +15,14 @@ def calculate_md5(file_path:str):
             hash_md5.update(chunk)
     return hash_md5.hexdigest()
 
-def process_json_files(directory:str):
+def process_json_files(directory:str) -> tuple[pd.DataFrame, pd.DataFrame]:
     """
     处理指定目录下的所有 JSON 文件
     :param directory: 指定目录
     :return: 包含处理结果的 DataFrame
     """
     data = []
+    mistakes = []
     # 遍历指定目录及子目录下的所有文件
     for root, _, files in os.walk(directory):
         for file in files:
@@ -42,9 +43,14 @@ def process_json_files(directory:str):
                             'mistakes_count': mistakes_count,
                             'file_path': file_path
                         })
+                        _mistakes = json_data.get('mistakes', [])
+                        for mistake in _mistakes:
+                            mistake['id'] = file_id
+                            mistakes.append(mistake)
+
                 except Exception as e:
                     print(f"Error processing {file_path}: {e}")
-    return pd.DataFrame(data)
+    return pd.DataFrame(data), pd.DataFrame(mistakes)
 
 def save_to_parquet(df:pd.DataFrame, output_path: str):
     """
@@ -55,10 +61,19 @@ def save_to_parquet(df:pd.DataFrame, output_path: str):
     df.to_parquet(output_path, index=False)
 
 if __name__ == "__main__":
+    
+    from dotenv import load_dotenv
+    if not load_dotenv():  # 加载环境变量
+        print("环境变量加载失败")
+        exit(1)
     # 指定要遍历的目录
-    input_directory = '.\\papers'
+    input_directory = os.getenv('TARGET_DIR', '')
     # 指定输出的 Parquet 文件路径
-    output_file = 'output.parquet'
-    df = process_json_files(input_directory)
-    save_to_parquet(df, output_file)
+    output_file = os.path.join(input_directory, 'summary.parquet')
+    mistakes_file = os.path.join(input_directory,'mistakes.parquet')
+    # 处理 JSON 文件并保存到 Parquet 文件
+    df_summary, df_mistakes = process_json_files(input_directory)
+    save_to_parquet(df_summary, output_file)
+    save_to_parquet(df_mistakes, mistakes_file)
+    
     print(f"Data saved to {output_file}")
