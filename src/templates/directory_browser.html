@@ -16,19 +16,19 @@
             height: calc(100vh - 40px);
         }
         .directory-tree {
-            width: 300px;
+            width: 20%;
             border-right: 1px solid #e6e6e6;
             padding-right: 20px;
             overflow-y: auto;
         }
         .file-list {
-            width: 400px;
+            width: 25%;
             border-right: 1px solid #e6e6e6;
             padding: 0 20px;
             overflow-y: auto;
         }
         .preview-pane {
-            flex: 1;
+            width: 55%;
             padding-left: 20px;
             overflow-y: auto;
         }
@@ -194,28 +194,55 @@
                     } else if (path.match(/\.pdf$/i)) {
                         const container = document.createElement('div');
                         container.id = 'pdf-container';
+                        
+                        // 添加控制面板
+                        const controls = document.createElement('div');
+                        controls.style.marginBottom = '10px';
+                        
+                        const zoomInBtn = document.createElement('button');
+                        zoomInBtn.textContent = '放大';
+                        zoomInBtn.addEventListener('click', () => this.changePdfZoom(1.2));
+                        
+                        const zoomOutBtn = document.createElement('button');
+                        zoomOutBtn.textContent = '缩小';
+                        zoomOutBtn.addEventListener('click', () => this.changePdfZoom(0.8));
+                        
+                        const prevBtn = document.createElement('button');
+                        prevBtn.textContent = '上一页';
+                        prevBtn.addEventListener('click', () => this.changePdfPage(-1));
+                        
+                        const nextBtn = document.createElement('button');
+                        nextBtn.textContent = '下一页';
+                        nextBtn.addEventListener('click', () => this.changePdfPage(1));
+                        
+                        const pageInfo = document.createElement('span');
+                        pageInfo.style.margin = '0 10px';
+                        pageInfo.id = 'pdf-page-info';
+                        
+                        controls.appendChild(zoomInBtn);
+                        controls.appendChild(zoomOutBtn);
+                        controls.appendChild(prevBtn);
+                        controls.appendChild(pageInfo);
+                        controls.appendChild(nextBtn);
+                        
+                        previewDiv.appendChild(controls);
                         previewDiv.appendChild(container);
+                        
+                        this.currentPdf = {
+                            doc: null,
+                            pageNum: 1,
+                            scale: 1.0
+                        };
                         
                         fetch(`/api/file?path=${encodeURIComponent(path)}`)
                             .then(response => response.blob())
                             .then(blob => {
                                 const fileReader = new FileReader();
-                                fileReader.onload = function() {
-                                    const typedarray = new Uint8Array(this.result);
-                                    pdfjsLib.getDocument(typedarray).promise.then(function(pdf) {
-                                        pdf.getPage(1).then(function(page) {
-                                            const viewport = page.getViewport({ scale: 1.0 });
-                                            const canvas = document.createElement('canvas');
-                                            const context = canvas.getContext('2d');
-                                            canvas.height = viewport.height;
-                                            canvas.width = viewport.width;
-                                            container.appendChild(canvas);
-                                            
-                                            page.render({
-                                                canvasContext: context,
-                                                viewport: viewport
-                                            });
-                                        });
+                                fileReader.onload = () => {
+                                    const typedarray = new Uint8Array(fileReader.result);
+                                    pdfjsLib.getDocument(typedarray).promise.then(pdf => {
+                                        this.currentPdf.doc = pdf;
+                                        this.renderPdfPage();
                                     });
                                 };
                                 fileReader.readAsArrayBuffer(blob);
@@ -223,6 +250,43 @@
                     } else {
                         previewDiv.innerHTML = '<p>不支持预览此文件类型</p>';
                     }
+                },
+                changePdfZoom(factor) {
+                    if (this.currentPdf && this.currentPdf.doc) {
+                        this.currentPdf.scale *= factor;
+                        this.renderPdfPage();
+                    }
+                },
+                changePdfPage(offset) {
+                    if (this.currentPdf && this.currentPdf.doc) {
+                        const newPage = this.currentPdf.pageNum + offset;
+                        if (newPage > 0 && newPage <= this.currentPdf.doc.numPages) {
+                            this.currentPdf.pageNum = newPage;
+                            this.renderPdfPage();
+                        }
+                    }
+                },
+                renderPdfPage() {
+                    const container = document.getElementById('pdf-container');
+                    container.innerHTML = '';
+                    
+                    this.currentPdf.doc.getPage(this.currentPdf.pageNum).then(page => {
+                        const viewport = page.getViewport({ scale: this.currentPdf.scale });
+                        const canvas = document.createElement('canvas');
+                        const context = canvas.getContext('2d');
+                        canvas.height = viewport.height;
+                        canvas.width = viewport.width;
+                        container.appendChild(canvas);
+                        
+                        page.render({
+                            canvasContext: context,
+                            viewport: viewport
+                        });
+                        
+                        // 更新页码显示
+                        document.getElementById('pdf-page-info').textContent = 
+                            `第 ${this.currentPdf.pageNum} 页 / 共 ${this.currentPdf.doc.numPages} 页`;
+                    });
                 },
                 handleFileClick(row) {
                     this.previewFile(row.path);

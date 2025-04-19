@@ -7,6 +7,7 @@ from io import BytesIO
 
 import cv2
 import numpy as np
+import click
 
 def crop_image_edges(image_data: bytes) -> bytes:
     """改进版边缘检测，适用于偏黄纸张"""
@@ -51,8 +52,9 @@ def crop_image_edges(image_data: bytes) -> bytes:
     
     return image_data
 
-
-def scan_paper() -> None:
+@click.command()
+@click.option('--target-dir', default='./papers', help='指定目标目录')
+def scan_paper(target_dir:str) -> None:
     """
     使用TWAIN接口扫描试卷并保存为PDF
     """
@@ -115,12 +117,12 @@ def scan_paper() -> None:
     
     # 将扫描的页面保存为PDF
     if scanned_pages:
-        save_as_pdf(scanned_pages)
+        save_as_pdf(scanned_pages, target_dir)
 
 def mm_to_points(mm: float) -> float:
     return mm / 25.4 * 72  # 毫米转点
 
-def save_as_pdf(pages: list[bytes]) -> None:
+def save_as_pdf(pages: list[bytes], target_dir:str) -> None:
     """
     将扫描的页面保存为PDF文件
     
@@ -141,7 +143,7 @@ def save_as_pdf(pages: list[bytes]) -> None:
     
     # 保存PDF
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    output_path = os.path.join("./papers", f"scan_{len(pages):03d}_{timestamp}.pdf")
+    output_path = os.path.join(target_dir, f"scan_{len(pages):03d}_{timestamp}.pdf")
     pdf.save(output_path) # pyright: ignore[reportUnknownMemberType]
     pdf.close()
     print(f"PDF已保存至: {output_path}")

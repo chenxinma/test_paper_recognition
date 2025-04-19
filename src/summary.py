@@ -1,7 +1,9 @@
 import os
 import hashlib
 import json
+
 import pandas as pd
+import click
 
 def calculate_md5(file_path:str):
     """
@@ -60,14 +62,11 @@ def save_to_parquet(df:pd.DataFrame, output_path: str):
     """
     df.to_parquet(output_path, index=False)
 
-if __name__ == "__main__":
-    
-    from dotenv import load_dotenv
-    if not load_dotenv():  # 加载环境变量
-        print("环境变量加载失败")
-        exit(1)
+@click.command()
+@click.option('--source-dir', default='Y:/', help='统计源目录')
+def main(source_dir: str):
     # 指定要遍历的目录
-    input_directory = os.getenv('TARGET_DIR', '')
+    input_directory = source_dir
     # 指定输出的 Parquet 文件路径
     output_file = os.path.join(input_directory, 'summary.parquet')
     mistakes_file = os.path.join(input_directory,'mistakes.parquet')
@@ -77,3 +76,6 @@ if __name__ == "__main__":
     save_to_parquet(df_mistakes, mistakes_file)
     
     print(f"Data saved to {output_file}")
+
+if __name__ == "__main__":
+    main()

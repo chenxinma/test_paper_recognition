@@ -3,6 +3,5 @@
     "exclude": [
         "**/__pycache__"
     ],
-    "typeCheckingMode": "strict",
-    "python.analysis.typeCheckingMode": "base",
+    "typeCheckingMode": "basic"
 }

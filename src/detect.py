@@ -4,14 +4,20 @@ import asyncio
 from typing import Any
 
 import cv2
-import filetype # pyright: ignore[reportMissingTypeStubs]
-import pymupdf # pyright: ignore[reportMissingTypeStubs]
+import filetype
+import pymupdf
 import numpy as np
 
 from tqdm import tqdm
 from ocr import orc_update_paper_info
 from agent import category_update_paper_info, mistakes_update_paper_info
 from paper_typing import PaperFile
+
+import logfire
+
+# configure logfire
+logfire.configure(token='pylf_v1_us_L4ycFzt8Jjybql77YnNTKWZVP9pQmSWtg1gXHmSt2Rwc')
+logfire.instrument_openai()
 
 handlers = [ 
     orc_update_paper_info, 
@@ -78,6 +84,7 @@ async def main():
     paper_files = get_files(paper_directory)
     # 遍历处理所有 PNG 文件
     for file_url in tqdm(paper_files):
+        tqdm.write(f"正在处理 {file_url} ...")
         kind = filetype.guess(file_url) # pyright: ignore[reportUnknownMemberType]
         if kind is None:
             print('无法判断文件类型!')
@@ -89,11 +96,16 @@ async def main():
             s_file = file_url
         
         data: dict[str, Any] = {}  # pyright: ignore[reportExplicitAny]
+        try:
+            last_func_name = None
+            for updator_func in handlers:
+                last_func_name = updator_func.__name__
+                tqdm.write(f"正在使用 {updator_func.__name__} 进行更新...")
+                await updator_func(data, s_file)
 
-        for updator_func in handlers:
-            await updator_func(data, s_file)
-
-        await save_result_to_json(data, file_url)
+            await save_result_to_json(data, file_url)
+        except Exception as e:
+            tqdm.write(f"!!处理 {last_func_name} 时出错: {e}")
 
 if __name__ == "__main__":
     asyncio.run(main())

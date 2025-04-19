@@ -35,7 +35,7 @@ async def get_directory(path: str = ''):
     items: list[FSItem] = []
     if os.path.exists(path):
         for entry in os.listdir(path):
-            if entry.startswith('.') or entry.endswith('.json'):
+            if entry.startswith('.') or entry.endswith('.json') or entry.startswith('_'):
                 continue
             entry_path = os.path.join(path, entry)
             items.append({

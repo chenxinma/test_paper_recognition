@@ -4,6 +4,7 @@ import shutil
 import re
 from typing import Any
 from datetime import datetime
+import click
 
 def process_files(paper_dir: str, target_dir: str):
     # 遍历 paper 目录下的所有文件
@@ -48,19 +49,13 @@ def process_files(paper_dir: str, target_dir: str):
                     os.remove(new_json_path)
                 shutil.move(json_file_path, new_json_path)  # 新增移动JSON文件
 
+@click.command()
+@click.option('--paper-dir', default='./papers', help='指定 paper 目录')
+@click.option('--target-dir', default='Y://', help='指定目标目录')
+@click.argument('name')
+def main(paper_dir: str, target_dir: str, name: str):
+    target_directory = os.path.join(target_dir, name) 
+    process_files(paper_dir, target_directory)
 
 if __name__ == "__main__":
-    from dotenv import load_dotenv
-    if not load_dotenv():  # 加载环境变量
-        print("环境变量加载失败")
-        exit(1)
-    
-    # 从环境变量读取路径配置
-    paper_directory = os.getenv('PAPER_DIR', './papers')  # 默认值保持向后兼容
-    target_directory = os.getenv('TARGET_DIR')  # 必须配置的环境变量
-    
-    # 检查目标目录配置是否存在
-    if not target_directory:
-        raise ValueError("请配置环境变量 TARGET_DIR 指定目标目录")
-    
-    process_files(paper_directory, target_directory)
+    main()
