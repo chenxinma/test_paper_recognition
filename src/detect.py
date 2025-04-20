@@ -7,6 +7,7 @@ import cv2
 import filetype
 import pymupdf
 import numpy as np
+import click
 
 from tqdm import tqdm
 from ocr import orc_update_paper_info
@@ -77,9 +78,11 @@ async def save_result_to_json(data, img_url:str): # pyright: ignore[reportUnknow
     with open(result_file_path, 'w', encoding='utf-8') as f:
         json.dump(data, f, ensure_ascii=False, indent=4)
 
-async def main():
+@click.command()
+@click.option('--paper-dir', default='./papers', help='指定 paper 目录')
+async def main(paper_dir: str):
     # 指定试卷目录
-    paper_directory = os.getenv('PAPER_DIR', './papers')  # 默认值保持向后兼容
+    paper_directory = paper_dir
     # 获取所有需要处理的 PNG 文件路径
     paper_files = get_files(paper_directory)
     # 遍历处理所有 PNG 文件
