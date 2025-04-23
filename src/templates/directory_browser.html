@@ -31,6 +31,21 @@
             width: 55%;
             padding-left: 20px;
             overflow-y: auto;
+            position: relative; /* 添加相对定位 */
+        }
+        .info-panel {
+            position: absolute;
+            right: 0;
+            top: 0;
+            width: 300px;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.6);
+            padding: 20px;
+            box-shadow: -2px 0 5px rgba(0,0,0,0.1);
+            overflow-y: auto;
+        }
+        #preview-content {
+            margin-right: 320px; /* 给信息面板留出空间 */
         }
         #image-preview {
             max-width: 100%;
@@ -72,6 +87,13 @@
             <div id="preview-content">
                 <p>请选择文件进行预览</p>
             </div>
+
+            <div class="info-panel" v-if="fileInfo">
+                <h3>试卷信息</h3>
+                <p><b>[[ fileInfo.subject ]]</b></p>
+                <p>[[ fileInfo.title ]]</p>
+                <p>错题数：[[ fileInfo.mistakes_count ]]</p>
+            </div>
         </div>
     </div>
 
@@ -85,6 +107,7 @@
         // 初始化 Vue 实例
         const app = new Vue({
             el: '#app',
+            delimiters: ['[[', ']]'],
             data() {
                 return {
                     treeData: [],
@@ -93,7 +116,8 @@
                         children: 'children',
                         label: 'name'
                     },
-                    currentPath: ''
+                    currentPath: '',
+                    fileInfo: {}
                 }
             },
             mounted() {
@@ -185,7 +209,15 @@
                 previewFile(path) {
                     const previewDiv = document.getElementById('preview-content');
                     previewDiv.innerHTML = '';
-                    
+                    this.fileInfo = null;
+
+                    // 获取文件元数据
+                    fetch(`/api/json-info?path=${encodeURIComponent(path)}`)
+                        .then(response => response.json())
+                        .then(data => {
+                            this.fileInfo = data;
+                        });
+
                     if (path.match(/\.(png|jpg|jpeg|gif)$/i)) {
                         const img = document.createElement('img');
                         img.id = 'image-preview';

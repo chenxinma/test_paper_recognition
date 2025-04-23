@@ -9,6 +9,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 
 import uvicorn
+import json
 
 BASE_DIR = Path(__file__).parent
 
@@ -56,6 +57,22 @@ async def get_file(path: str):
         return FileResponse(path, media_type='application/pdf')
     else:
         raise HTTPException(status_code=400, detail='Unsupported file type')
+
+
+@app.get('/api/json-info')
+async def get_json_info(path: str):
+    # 生成同名的json文件路径
+    json_path = os.path.splitext(path)[0] + '.json'
+    if not os.path.exists(json_path) or not os.path.isfile(json_path):
+        raise HTTPException(status_code=404, detail='JSON文件不存在')
+    try:
+        # 读取json文件内容
+        with open(json_path, 'r', encoding='utf-8') as f:
+            json_data = json.load(f)
+        return JSONResponse(content=json_data)
+    except Exception as e:
+        # 处理读取文件时的异常
+        raise HTTPException(status_code=500, detail=f'读取JSON文件时出错: {str(e)}')
 
 if __name__ == "__main__":
     uvicorn.run("web:app", host="127.0.0.1", port=8000, log_level="info")
