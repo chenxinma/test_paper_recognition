@@ -8,7 +8,7 @@ import cv2
 import filetype
 import pymupdf
 import numpy as np
-import click
+import asyncclick as click
 
 from tqdm import tqdm
 from ocr import orc_update_paper_info
@@ -83,6 +83,7 @@ async def save_result_to_json(data, img_url:str): # pyright: ignore[reportUnknow
 @click.command()
 @click.option('--paper-dir', default='./papers', help='指定 paper 目录')
 async def main(paper_dir: str):
+
     # 指定试卷目录
     paper_directory = paper_dir  # 默认值保持向后兼容
     # 获取所有需要处理的 PNG 文件路径
@@ -111,6 +112,7 @@ async def main(paper_dir: str):
             await save_result_to_json(data, file_url)
         except Exception as e:
             tqdm.write(f"!!处理 {last_func_name} 时出错: {e}")
+
 
 if __name__ == "__main__":
     asyncio.run(main())
